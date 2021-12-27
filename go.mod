@@ -2,10 +2,12 @@ module github.com/pjquirk/gh-splitpr
 
 go 1.17
 
-require github.com/cli/go-gh v0.0.1
+require (
+	github.com/charmbracelet/bubbletea v0.19.2
+	github.com/cli/go-gh v0.0.1
+)
 
 require (
-	github.com/charmbracelet/bubbletea v0.19.2 // indirect
 	github.com/cli/safeexec v1.0.0 // indirect
 	github.com/cli/shurcooL-graphql v0.0.1 // indirect
 	github.com/containerd/console v1.0.2 // indirect
