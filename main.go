@@ -5,20 +5,11 @@ import (
 
 	"log"
 
-	"github.com/cli/go-gh"
-
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 func main() {
-	repo, err := gh.CurrentRepository()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// TODO: args for the PR
-
-	p := tea.NewProgram(ui.NewModel(repo))
+	p := tea.NewProgram(ui.NewModel())
 	if err := p.Start(); err != nil {
 		log.Fatal(err)
 	}

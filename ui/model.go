@@ -12,24 +12,21 @@ import (
 
 type Model struct {
 	verbose      bool
+	err          error
 	repository   gh.Repository
 	pullRequests []cmd.PullRequest
 }
 
-func NewModel(repo gh.Repository) Model {
+func NewModel() Model {
 	return Model{
 		verbose:      false,
-		repository:   repo,
+		repository:   nil,
 		pullRequests: nil,
 	}
 }
 
 func (m Model) Init() tea.Cmd {
-	// Find the available pull requests
-	fetchPullRequests := func() tea.Msg {
-		return cmd.FetchPullRequests(m.repository)
-	}
-	return fetchPullRequests
+	return cmd.ParseOptions
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -38,8 +35,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case cmd.ErrMsg:
 		// There was an error. Note it in the model. And tell the runtime
 		// we're done and want to quit.
-		//m.err = msg
+		errMsg := cmd.ErrMsg(msg)
+		m.err = errMsg.Error
 		return m, tea.Quit
+
+	case cmd.OptionsParsed:
+		options := cmd.OptionsParsed(msg)
+		m.repository = options.Repository
+		//m.pullRequestId = options.PullRequest
+		fetchPullRequests := func() tea.Msg {
+			return cmd.FetchPullRequests(m.repository)
+		}
+		return m, fetchPullRequests
 
 	case cmd.PullRequestsFetched:
 		fetched := cmd.PullRequestsFetched(msg)
@@ -59,6 +66,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
+	if m.err != nil {
+		return fmt.Sprintf("Error: %s", m.err)
+	}
+
+	if m.repository == nil {
+		return "Getting repository information..."
+	}
 	if m.pullRequests == nil {
 		return fmt.Sprintf("Looking for pull requests in %s/%s...", m.repository.Owner(), m.repository.Name())
 	}
