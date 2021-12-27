@@ -1,26 +1,26 @@
 package main
 
 import (
+	"github.com/pjquirk/gh-splitpr/ui"
+
 	"fmt"
+	"os"
 
 	"github.com/cli/go-gh"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 func main() {
-	fmt.Println("hi world, this is the gh-splitpr extension!")
-	client, err := gh.RESTClient(nil)
+	repo, err := gh.CurrentRepository()
 	if err != nil {
-		fmt.Println(err)
-		return
+		fmt.Printf("Must be run from within a clone of a GitHub repository: %v", err)
+        os.Exit(1)
 	}
-	response := struct {Login string}{}
-	err = client.Get("user", &response)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	fmt.Printf("running as %s\n", response.Login)
-}
 
-// For more examples of using go-gh, see:
-// https://github.com/cli/go-gh/blob/trunk/example_gh_test.go
+    p := tea.NewProgram(ui.NewModel(repo))
+    if err := p.Start(); err != nil {
+        fmt.Printf("Fatal error encountered: %v", err)
+        os.Exit(1)
+    }
+}
