@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/cli/go-gh"
@@ -21,8 +22,17 @@ type PullRequestsFetched struct {
 	PullRequests []PullRequest
 }
 
-func FetchPullRequests() tea.Msg {
-	stdOut, _, err := gh.Exec("pr", "list", "--json", "number,title,author")
+func FetchPullRequests(
+	repository gh.Repository,
+) tea.Msg {
+	var nwo string
+	if repository.Host() != "" {
+		nwo = fmt.Sprintf("%s/%s/%s", repository.Host(), repository.Owner(), repository.Name())
+	} else {
+		nwo = fmt.Sprintf("%s/%s", repository.Owner(), repository.Name())
+	}
+
+	stdOut, _, err := gh.Exec("pr", "list", "--repo", nwo, "--json", "number,title,author")
 	if err != nil {
 		return ErrMsg{err}
 	}

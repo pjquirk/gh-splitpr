@@ -15,12 +15,14 @@ func main() {
 	repo, err := gh.CurrentRepository()
 	if err != nil {
 		fmt.Printf("Must be run from within a clone of a GitHub repository: %v", err)
-        os.Exit(1)
+		os.Exit(1)
 	}
 
-    p := tea.NewProgram(ui.NewModel(repo))
-    if err := p.Start(); err != nil {
-        fmt.Printf("Fatal error encountered: %v", err)
-        os.Exit(1)
-    }
+	// TODO: args for the PR
+
+	p := tea.NewProgram(ui.NewModel(repo))
+	if err := p.Start(); err != nil {
+		fmt.Printf("Fatal error encountered: %v", err)
+		os.Exit(1)
+	}
 }

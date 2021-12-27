@@ -26,7 +26,10 @@ func NewModel(repo gh.Repository) Model {
 
 func (m Model) Init() tea.Cmd {
 	// Find the available pull requests
-	return cmd.FetchPullRequests
+	fetchPullRequests := func() tea.Msg {
+		return cmd.FetchPullRequests(m.repository)
+	}
+	return fetchPullRequests
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
