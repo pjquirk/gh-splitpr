@@ -1,7 +1,8 @@
 package ui
 
 import (
-	"encoding/json"
+	"github.com/pjquirk/gh-splitpr/cmd"
+
 	"fmt"
 	"strings"
 
@@ -12,7 +13,7 @@ import (
 type Model struct {
 	verbose      bool
 	repository   gh.Repository
-	pullRequests []pullRequest
+	pullRequests []cmd.PullRequest
 }
 
 func NewModel(repo gh.Repository) Model {
@@ -25,21 +26,21 @@ func NewModel(repo gh.Repository) Model {
 
 func (m Model) Init() tea.Cmd {
 	// Find the available pull requests
-	return listPullRequests
+	return cmd.FetchPullRequests
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 
-	case errMsg:
+	case cmd.ErrMsg:
 		// There was an error. Note it in the model. And tell the runtime
 		// we're done and want to quit.
 		//m.err = msg
 		return m, tea.Quit
 
-	case pullRequests:
-		prs := pullRequests(msg)
-		m.pullRequests = prs.pullRequests
+	case cmd.PullRequestsFetched:
+		fetched := cmd.PullRequestsFetched(msg)
+		m.pullRequests = fetched.PullRequests
 		return m, nil
 
 	case tea.KeyMsg:
@@ -63,7 +64,7 @@ func (m Model) View() string {
 	s.WriteString(fmt.Sprintf("Found %d pull requests:", len(m.pullRequests)))
 	for i := 0; i < len(m.pullRequests); i++ {
 		pr := m.pullRequests[i]
-		s.WriteString(fmt.Sprintf("\n%d\t%s\t%s", pr.number, pr.author, pr.title))
+		s.WriteString(fmt.Sprintf("\n%d\t%s\t%s", pr.Number, pr.Author, pr.Title))
 	}
 
 	s.WriteString("\nPress q to quit.")
@@ -72,53 +73,3 @@ func (m Model) View() string {
 }
 
 // -----------
-
-type errMsg struct {
-	err error
-}
-
-type pullRequest struct {
-	number int
-	title  string
-	author string
-}
-
-type pullRequests struct {
-	pullRequests []pullRequest
-}
-type pullRequestRaw struct {
-	Number int       `json:"number"`
-	Title  string    `json:"title"`
-	Author authorRaw `json:"author"`
-}
-
-type authorRaw struct {
-	Login string `json:"login"`
-}
-
-func ConvertPullRequests(src []pullRequestRaw) []pullRequest {
-	dst := make([]pullRequest, len(src))
-	for i, t := range src {
-		dst[i] = pullRequest{
-			number: t.Number,
-			title:  t.Title,
-			author: t.Author.Login,
-		}
-	}
-	return dst
-}
-
-func listPullRequests() tea.Msg {
-	stdOut, _, err := gh.Exec("pr", "list", "--json", "number,title,author")
-	if err != nil {
-		return errMsg{err}
-	}
-
-	var rawPullRequests []pullRequestRaw
-	err = json.Unmarshal(stdOut.Bytes(), &rawPullRequests)
-	if err != nil {
-		return errMsg{err}
-	}
-
-	return pullRequests{ConvertPullRequests(rawPullRequests)}
-}
