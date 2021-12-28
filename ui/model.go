@@ -1,28 +1,25 @@
 package ui
 
 import (
+	"strings"
+
 	"github.com/pjquirk/gh-splitpr/cmd"
 
 	"fmt"
-	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/cli/go-gh"
 )
 
 type Model struct {
-	verbose       bool
-	err           string
-	repository    gh.Repository
-	pullRequestId int
-	pullRequests  []cmd.PullRequest
+	verbose   bool
+	err       string
+	bootstrap BootstrapModel
 }
 
 func NewModel() Model {
 	return Model{
-		verbose:      false,
-		repository:   nil,
-		pullRequests: nil,
+		verbose:   false,
+		bootstrap: BootstrapModel{},
 	}
 }
 
@@ -45,33 +42,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.err = usageShown.Usage
 		return m, tea.Quit
 
-	case cmd.OptionsParsed:
-		options := cmd.OptionsParsed(msg)
-		m.repository = options.Repository
-		m.pullRequestId = options.PullRequest
-		if m.pullRequestId > 0 {
-			// Skip getting all PRs
-			return m, nil
-		} else {
-			fetchPullRequests := func() tea.Msg {
-				return cmd.FetchPullRequests(m.repository)
-			}
-			return m, fetchPullRequests
-		}
-
-	case cmd.PullRequestsFetched:
-		fetched := cmd.PullRequestsFetched(msg)
-		m.pullRequests = fetched.PullRequests
-		return m, nil
-
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "q":
+		case "ctrl+c", "q":
 			return m, tea.Quit
-		case "?":
-			return m, nil
+		default:
+			if !m.bootstrap.IsComplete() {
+				return m.bootstrap.Update(msg)
+			}
 		}
-
+	default:
+		if !m.bootstrap.IsComplete() {
+			return m.bootstrap.Update(msg)
+		}
 	}
 	return m, nil
 }
@@ -81,30 +64,15 @@ func (m Model) View() string {
 		return m.err
 	}
 
-	// Is bootstrapping done?
-	if m.repository != nil && m.pullRequestId > 0 {
-		nwo := cmd.ToNwo(m.repository)
-		return fmt.Sprintf("Getting commit information for #%d in %s...", m.pullRequestId, nwo)
-	}
-
-	if m.repository == nil {
-		return "Getting repository information..."
-	}
-	nwo := cmd.ToNwo(m.repository)
-
 	s := strings.Builder{}
 
-	if m.pullRequests == nil {
-		return fmt.Sprintf("Looking for pull requests in %s...", nwo)
+	if !m.bootstrap.IsComplete() {
+		s.WriteString(m.bootstrap.View())
 	} else {
-		s.WriteString(fmt.Sprintf("Found %d pull requests:", len(m.pullRequests)))
-		for i := 0; i < len(m.pullRequests); i++ {
-			pr := m.pullRequests[i]
-			s.WriteString(fmt.Sprintf("\n%d\t%s\t%s", pr.Number, pr.Author, pr.Title))
-		}
+		nwo := cmd.ToNwo(m.bootstrap.Repository)
+		s.WriteString(fmt.Sprintf("Getting commit information for #%d in %s...", m.bootstrap.PullRequestId, nwo))
 	}
 
-	s.WriteString("\nPress q to quit.")
-
+	s.WriteString("\n\nPress q to quit")
 	return s.String()
 }
