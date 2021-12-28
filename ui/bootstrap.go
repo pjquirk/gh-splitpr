@@ -13,8 +13,9 @@ import (
 type BootstrapModel struct {
 	Repository    gh.Repository
 	PullRequestId int
-	PullRequests  []cmd.PullRequest
-	PRSelector    *selector.Model
+
+	pullRequests []cmd.PullRequest
+	prSelector   *selector.Model
 }
 
 func (m BootstrapModel) IsComplete() bool {
@@ -33,7 +34,7 @@ func (m BootstrapModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// Handle selected PR first since its different
 	if msg == common.DONE {
-		selected := m.PRSelector.Selected()
+		selected := m.prSelector.Selected()
 		pr := selected.(cmd.PullRequest)
 		m.PullRequestId = pr.Number
 		return m, nil
@@ -56,13 +57,13 @@ func (m BootstrapModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case cmd.PullRequestsFetched:
 			fetched := cmd.PullRequestsFetched(msg)
-			m.PullRequests = fetched.PullRequests
+			m.pullRequests = fetched.PullRequests
 
-			data := make([]interface{}, len(m.PullRequests))
-			for i, v := range m.PullRequests {
+			data := make([]interface{}, len(m.pullRequests))
+			for i, v := range m.pullRequests {
 				data[i] = v
 			}
-			m.PRSelector = &selector.Model{
+			m.prSelector = &selector.Model{
 				Data:       data,
 				PerPage:    5,
 				HeaderFunc: selector.DefaultHeaderFuncWithAppend("Select a pull request to split:"),
@@ -80,8 +81,8 @@ func (m BootstrapModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	if m.PRSelector != nil {
-		m.PRSelector, command = m.PRSelector.Update(msg)
+	if m.prSelector != nil {
+		m.prSelector, command = m.prSelector.Update(msg)
 		commands = append(commands, command)
 	}
 	return m, tea.Batch(commands...)
@@ -97,9 +98,9 @@ func (m BootstrapModel) View() string {
 	}
 	nwo := cmd.ToNwo(m.Repository)
 
-	if m.PullRequests == nil {
+	if m.pullRequests == nil {
 		return fmt.Sprintf("Looking for pull requests in %s...", nwo)
 	} else {
-		return m.PRSelector.View()
+		return m.prSelector.View()
 	}
 }
