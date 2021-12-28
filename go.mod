@@ -5,6 +5,7 @@ go 1.17
 require (
 	github.com/charmbracelet/bubbletea v0.19.2
 	github.com/cli/go-gh v0.0.1
+	github.com/mritd/bubbles v0.0.0-20210825105013-cb7a572fb831
 )
 
 require (
