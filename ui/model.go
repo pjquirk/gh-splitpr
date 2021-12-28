@@ -11,10 +11,11 @@ import (
 )
 
 type Model struct {
-	verbose      bool
-	err          error
-	repository   gh.Repository
-	pullRequests []cmd.PullRequest
+	verbose       bool
+	err           string
+	repository    gh.Repository
+	pullRequestId int
+	pullRequests  []cmd.PullRequest
 }
 
 func NewModel() Model {
@@ -36,17 +37,27 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// There was an error. Note it in the model. And tell the runtime
 		// we're done and want to quit.
 		errMsg := cmd.ErrMsg(msg)
-		m.err = errMsg.Error
+		m.err = fmt.Sprintf("Error: %s", errMsg.Error)
+		return m, tea.Quit
+
+	case cmd.UsageShown:
+		usageShown := cmd.UsageShown(msg)
+		m.err = usageShown.Usage
 		return m, tea.Quit
 
 	case cmd.OptionsParsed:
 		options := cmd.OptionsParsed(msg)
 		m.repository = options.Repository
-		//m.pullRequestId = options.PullRequest
-		fetchPullRequests := func() tea.Msg {
-			return cmd.FetchPullRequests(m.repository)
+		m.pullRequestId = options.PullRequest
+		if m.pullRequestId > 0 {
+			// Skip getting all PRs
+			return m, nil
+		} else {
+			fetchPullRequests := func() tea.Msg {
+				return cmd.FetchPullRequests(m.repository)
+			}
+			return m, fetchPullRequests
 		}
-		return m, fetchPullRequests
 
 	case cmd.PullRequestsFetched:
 		fetched := cmd.PullRequestsFetched(msg)
@@ -66,27 +77,34 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
-	if m.err != nil {
-		return fmt.Sprintf("Error: %s", m.err)
+	if len(m.err) > 0 {
+		return m.err
+	}
+
+	// Is bootstrapping done?
+	if m.repository != nil && m.pullRequestId > 0 {
+		nwo := cmd.ToNwo(m.repository)
+		return fmt.Sprintf("Getting commit information for #%d in %s...", m.pullRequestId, nwo)
 	}
 
 	if m.repository == nil {
 		return "Getting repository information..."
 	}
-	if m.pullRequests == nil {
-		return fmt.Sprintf("Looking for pull requests in %s/%s...", m.repository.Owner(), m.repository.Name())
-	}
+	nwo := cmd.ToNwo(m.repository)
 
 	s := strings.Builder{}
-	s.WriteString(fmt.Sprintf("Found %d pull requests:", len(m.pullRequests)))
-	for i := 0; i < len(m.pullRequests); i++ {
-		pr := m.pullRequests[i]
-		s.WriteString(fmt.Sprintf("\n%d\t%s\t%s", pr.Number, pr.Author, pr.Title))
+
+	if m.pullRequests == nil {
+		return fmt.Sprintf("Looking for pull requests in %s...", nwo)
+	} else {
+		s.WriteString(fmt.Sprintf("Found %d pull requests:", len(m.pullRequests)))
+		for i := 0; i < len(m.pullRequests); i++ {
+			pr := m.pullRequests[i]
+			s.WriteString(fmt.Sprintf("\n%d\t%s\t%s", pr.Number, pr.Author, pr.Title))
+		}
 	}
 
 	s.WriteString("\nPress q to quit.")
 
 	return s.String()
 }
-
-// -----------
