@@ -26,7 +26,7 @@ func (m BootstrapModel) Init() tea.Cmd {
 	return nil
 }
 
-func (m BootstrapModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m BootstrapModel) Update(msg tea.Msg) (BootstrapModel, tea.Cmd) {
 	var (
 		command  tea.Cmd
 		commands []tea.Cmd

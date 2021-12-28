@@ -28,6 +28,11 @@ func (m Model) Init() tea.Cmd {
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var (
+		command  tea.Cmd
+		commands []tea.Cmd
+	)
+
 	switch msg := msg.(type) {
 
 	case cmd.ErrMsg:
@@ -46,17 +51,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit
-		default:
-			if !m.bootstrap.IsComplete() {
-				return m.bootstrap.Update(msg)
-			}
-		}
-	default:
-		if !m.bootstrap.IsComplete() {
-			return m.bootstrap.Update(msg)
 		}
 	}
-	return m, nil
+
+	if !m.bootstrap.IsComplete() {
+		m.bootstrap, command = m.bootstrap.Update(msg)
+		commands = append(commands, command)
+	}
+	return m, tea.Batch(commands...)
 }
 
 func (m Model) View() string {
@@ -74,5 +76,6 @@ func (m Model) View() string {
 	}
 
 	s.WriteString("\n\nPress q to quit")
-	return s.String()
+	view := s.String()
+	return view
 }
