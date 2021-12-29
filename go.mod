@@ -3,15 +3,14 @@ module github.com/pjquirk/gh-splitpr
 go 1.17
 
 require (
+	github.com/charmbracelet/bubbles v0.9.0
 	github.com/charmbracelet/bubbletea v0.19.2
+	github.com/charmbracelet/lipgloss v0.4.0
 	github.com/cli/go-gh v0.0.1
-	github.com/mritd/bubbles v0.0.0-20210825105013-cb7a572fb831
 )
 
 require (
 	github.com/atotto/clipboard v0.1.2 // indirect
-	github.com/charmbracelet/bubbles v0.9.0 // indirect
-	github.com/charmbracelet/lipgloss v0.4.0 // indirect
 	github.com/cli/safeexec v1.0.0 // indirect
 	github.com/cli/shurcooL-graphql v0.0.1 // indirect
 	github.com/containerd/console v1.0.2 // indirect
