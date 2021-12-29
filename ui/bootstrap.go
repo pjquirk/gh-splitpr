@@ -6,20 +6,21 @@ import (
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/cli/go-gh"
 	"github.com/pjquirk/gh-splitpr/cmd"
 )
 
-type item struct {
+type prItem struct {
 	number int
 	title  string
 	author string
 	filter string
 }
 
-func newItem(pr cmd.PullRequest) item {
-	return item{
+func (i prItem) FilterValue() string { return i.filter }
+
+func newPrItem(pr cmd.PullRequest) prItem {
+	return prItem{
 		number: pr.Number,
 		title:  pr.Title,
 		author: pr.Author,
@@ -27,64 +28,35 @@ func newItem(pr cmd.PullRequest) item {
 	}
 }
 
-func newItems(pullRequests []cmd.PullRequest) []list.Item {
+func newPrItems(pullRequests []cmd.PullRequest) []list.Item {
 	items := make([]list.Item, len(pullRequests))
 	for i, v := range pullRequests {
-		items[i] = newItem(v)
+		items[i] = newPrItem(v)
 	}
 	return items
 }
 
-func (i item) FilterValue() string { return i.filter }
+type prItemDelegate struct{}
 
-var (
-	titleBarStyle     = list.DefaultStyles().TitleBar
-	titleStyle        = lipgloss.NewStyle().MarginLeft(2)
-	itemStyle         = lipgloss.NewStyle().PaddingLeft(4)
-	selectedItemStyle = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("170"))
-	paginationStyle   = list.DefaultStyles().PaginationStyle.PaddingLeft(4).PaddingBottom(0)
-	helpStyle         = list.DefaultStyles().HelpStyle.PaddingLeft(4).PaddingBottom(1)
-)
-
-type itemDelegate struct{}
-
-func (d itemDelegate) Height() int                               { return 1 }
-func (d itemDelegate) Spacing() int                              { return 0 }
-func (d itemDelegate) Update(msg tea.Msg, m *list.Model) tea.Cmd { return nil }
-func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
-	i, ok := listItem.(item)
+func (d prItemDelegate) Height() int                               { return 1 }
+func (d prItemDelegate) Spacing() int                              { return 0 }
+func (d prItemDelegate) Update(msg tea.Msg, m *list.Model) tea.Cmd { return nil }
+func (d prItemDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
+	i, ok := listItem.(prItem)
 	if !ok {
 		return
 	}
 
 	str := fmt.Sprintf("#%d - @%s - %s", i.number, i.author, i.title)
 
-	fn := itemStyle.Render
+	fn := defaultItemStyle.Render
 	if index == m.Index() {
 		fn = func(s string) string {
-			return selectedItemStyle.Render("> " + s)
+			return defaultSelectedItemStyle.Render("> " + s)
 		}
 	}
 
 	fmt.Fprintf(w, fn(str))
-}
-
-func newListModel() list.Model {
-	pageSize := 5 * (itemStyle.GetVerticalFrameSize() + 1)
-	titleBarHeight := titleBarStyle.GetVerticalFrameSize()
-	// Add one for each line of text
-	titleHeight := titleStyle.GetVerticalFrameSize() + 1
-	pageHeight := paginationStyle.GetVerticalFrameSize() + 1
-	helpHeight := helpStyle.GetVerticalFrameSize() + 1
-	height := titleBarHeight + titleHeight + pageHeight + helpHeight + pageSize
-
-	newModel := list.NewModel([]list.Item{}, itemDelegate{}, 0, height)
-	newModel.SetShowStatusBar(false)
-	newModel.Styles.Title = titleStyle
-	newModel.Styles.TitleBar = titleBarStyle
-	newModel.Styles.PaginationStyle = paginationStyle
-	newModel.Styles.HelpStyle = helpStyle
-	return newModel
 }
 
 type BootstrapModel struct {
@@ -100,7 +72,7 @@ func NewBootstrapModel() BootstrapModel {
 		Repository:    nil,
 		PullRequestId: -1,
 		pullRequests:  []cmd.PullRequest{},
-		prSelector:    newListModel(),
+		prSelector:    newListModel(5, defaultItemStyle),
 	}
 }
 
@@ -141,7 +113,8 @@ func (m BootstrapModel) Update(msg tea.Msg) (BootstrapModel, tea.Cmd) {
 		m.pullRequests = fetched.PullRequests
 		m.prSelector.Title = "Select a pull request to split:"
 		m.prSelector.StopSpinner()
-		commands = append(commands, m.prSelector.SetItems(newItems(m.pullRequests)))
+		items := newPrItems(m.pullRequests)
+		commands = append(commands, m.prSelector.SetItems(items))
 
 	case tea.KeyMsg:
 		if m.prSelector.FilterState() == list.Filtering {
@@ -150,7 +123,7 @@ func (m BootstrapModel) Update(msg tea.Msg) (BootstrapModel, tea.Cmd) {
 
 		switch keypress := msg.String(); keypress {
 		case "enter":
-			i, ok := m.prSelector.SelectedItem().(item)
+			i, ok := m.prSelector.SelectedItem().(prItem)
 			if ok {
 				m.PullRequestId = i.number
 			}
@@ -171,11 +144,4 @@ func (m BootstrapModel) View() string {
 
 	//nwo := cmd.ToNwo(m.Repository)
 	return m.prSelector.View()
-}
-
-func max(a int, b int) int {
-	if a > b {
-		return a
-	}
-	return b
 }
