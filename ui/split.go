@@ -55,16 +55,15 @@ func (d commitItemDelegate) Render(w io.Writer, m list.Model, index int, listIte
 	// Trim all but the first 8 chars of the SHA
 	str := fmt.Sprintf("%.8s - %s", i.sha, i.comment)
 
+	style := commitItemStyle
+	if index == m.Index() {
+		style = commitSelectedItemStyle
+	}
 	fn := func(s string) string {
 		if i.checked {
-			return commitItemStyle.Render("[X] " + s)
+			return style.Render("[X] " + s)
 		} else {
-			return commitItemStyle.Render("[ ] " + s)
-		}
-	}
-	if index == m.Index() {
-		fn = func(s string) string {
-			return commitSelectedItemStyle.Render("[ ] " + s)
+			return style.Render("[ ] " + s)
 		}
 	}
 
@@ -135,11 +134,12 @@ func (m SplitModel) Update(msg tea.Msg) (SplitModel, tea.Cmd) {
 
 		switch keypress := msg.String(); keypress {
 		case "enter":
-			_, ok := m.commitSelector.SelectedItem().(commitItem)
+			i, ok := m.commitSelector.SelectedItem().(commitItem)
 			if ok {
-				//m.PullRequestId = i.n
+				index := m.commitSelector.Index()
+				i.checked = !i.checked
+				commands = append(commands, m.commitSelector.SetItem(index, i))
 			}
-			return m, nil
 		}
 	}
 
