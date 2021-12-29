@@ -76,11 +76,9 @@ func (m Model) View() string {
 	if !m.bootstrap.IsComplete() {
 		s.WriteString(m.bootstrap.View())
 	} else {
-		nwo := cmd.ToNwo(m.bootstrap.Repository)
-		s.WriteString(fmt.Sprintf("Getting commit information for #%d in %s...", m.bootstrap.PullRequestId, nwo))
+		s.WriteString(m.split.View())
 	}
 
-	s.WriteString("\n\nPress q to quit")
 	view := s.String()
 	return view
 }

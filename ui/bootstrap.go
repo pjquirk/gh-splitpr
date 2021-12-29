@@ -72,7 +72,7 @@ func NewBootstrapModel() BootstrapModel {
 		Repository:    nil,
 		PullRequestId: -1,
 		pullRequests:  []cmd.PullRequest{},
-		prSelector:    newListModel(5, defaultItemStyle),
+		prSelector:    newListModel(5, prItemDelegate{}, defaultItemStyle),
 	}
 }
 
@@ -106,6 +106,13 @@ func (m BootstrapModel) Update(msg tea.Msg) (BootstrapModel, tea.Cmd) {
 				return cmd.FetchPullRequests(m.Repository)
 			}
 			commands = append(commands, fetchPullRequests, m.prSelector.StartSpinner())
+		} else {
+			commands = append(commands, func() tea.Msg {
+				return cmd.PullRequestSelected{
+					Repository:    m.Repository,
+					PullRequestId: m.PullRequestId,
+				}
+			})
 		}
 
 	case cmd.PullRequestsFetched:
@@ -126,8 +133,13 @@ func (m BootstrapModel) Update(msg tea.Msg) (BootstrapModel, tea.Cmd) {
 			i, ok := m.prSelector.SelectedItem().(prItem)
 			if ok {
 				m.PullRequestId = i.number
+				commands = append(commands, func() tea.Msg {
+					return cmd.PullRequestSelected{
+						Repository:    m.Repository,
+						PullRequestId: m.PullRequestId,
+					}
+				})
 			}
-			return m, nil
 		}
 	}
 

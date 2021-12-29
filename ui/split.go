@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/cli/go-gh"
 	"github.com/pjquirk/gh-splitpr/cmd"
 )
@@ -13,20 +14,22 @@ import (
 type commitItem struct {
 	sha     string
 	comment string
+	checked bool
 }
 
 func (i commitItem) FilterValue() string { return i.comment }
 
-func newCommitItem(pr cmd.PullRequest) commitItem {
+func newCommitItem(commit cmd.Commit) commitItem {
 	return commitItem{
-		sha:     pr.Author,
-		comment: pr.Title,
+		sha:     commit.Sha,
+		comment: commit.Comment,
+		checked: false,
 	}
 }
 
-func newCommitItems(pullRequests []cmd.PullRequest) []list.Item {
-	items := make([]list.Item, len(pullRequests))
-	for i, v := range pullRequests {
+func newCommitItems(commits []cmd.Commit) []list.Item {
+	items := make([]list.Item, len(commits))
+	for i, v := range commits {
 		items[i] = newCommitItem(v)
 	}
 	return items
@@ -34,6 +37,7 @@ func newCommitItems(pullRequests []cmd.PullRequest) []list.Item {
 
 var (
 	commitItemStyle         = defaultItemStyle
+	commitCheckedItemStyle  = defaultItemStyle.Background(lipgloss.Color("240"))
 	commitSelectedItemStyle = defaultSelectedItemStyle
 )
 
@@ -48,12 +52,19 @@ func (d commitItemDelegate) Render(w io.Writer, m list.Model, index int, listIte
 		return
 	}
 
-	str := fmt.Sprintf("%s - %s", i.sha, i.comment)
+	// Trim all but the first 8 chars of the SHA
+	str := fmt.Sprintf("%.8s - %s", i.sha, i.comment)
 
-	fn := commitItemStyle.Render
+	fn := func(s string) string {
+		if i.checked {
+			return commitItemStyle.Render("[X] " + s)
+		} else {
+			return commitItemStyle.Render("[ ] " + s)
+		}
+	}
 	if index == m.Index() {
 		fn = func(s string) string {
-			return commitSelectedItemStyle.Render("> " + s)
+			return commitSelectedItemStyle.Render("[ ] " + s)
 		}
 	}
 
@@ -64,21 +75,21 @@ type SplitModel struct {
 	Repository    gh.Repository
 	PullRequestId int
 
-	pullRequests []cmd.PullRequest
-	prSelector   list.Model
+	commits        []cmd.Commit
+	commitSelector list.Model
 }
 
 func NewSplitModel() SplitModel {
 	return SplitModel{
-		Repository:    nil,
-		PullRequestId: -1,
-		pullRequests:  []cmd.PullRequest{},
-		prSelector:    newListModel(5, commitItemStyle),
+		Repository:     nil,
+		PullRequestId:  -1,
+		commits:        []cmd.Commit{},
+		commitSelector: newListModel(5, commitItemDelegate{}, commitItemStyle),
 	}
 }
 
 func (m SplitModel) IsComplete() bool {
-	return m.Repository != nil && m.PullRequestId > 0
+	return false
 }
 
 func (m SplitModel) Init() tea.Cmd {
@@ -94,36 +105,37 @@ func (m SplitModel) Update(msg tea.Msg) (SplitModel, tea.Cmd) {
 	switch msg := msg.(type) {
 
 	case tea.WindowSizeMsg:
-		m.prSelector.SetWidth(msg.Width)
+		m.commitSelector.SetWidth(msg.Width)
 
-	case cmd.OptionsParsed:
-		options := cmd.OptionsParsed(msg)
-		m.Repository = options.Repository
-		m.PullRequestId = options.PullRequest
-		if m.PullRequestId <= 0 {
-			m.prSelector.Title = "Looking for pull requests..."
-			// Start fetching pull requests
-			fetchPullRequests := func() tea.Msg {
-				return cmd.FetchPullRequests(m.Repository)
-			}
-			commands = append(commands, fetchPullRequests, m.prSelector.StartSpinner())
+	case cmd.PullRequestSelected:
+		prSelected := cmd.PullRequestSelected(msg)
+		m.Repository = prSelected.Repository
+		m.PullRequestId = prSelected.PullRequestId
+		nwo := cmd.ToNwo(m.Repository)
+		m.commitSelector.Title = fmt.Sprintf("Getting commits for %s %d...", nwo, m.PullRequestId)
+
+		// Start fetching commits
+		fetchCommits := func() tea.Msg {
+			return cmd.FetchCommits(m.Repository, m.PullRequestId)
 		}
+		commands = append(commands, fetchCommits, m.commitSelector.StartSpinner())
 
-	case cmd.PullRequestsFetched:
-		fetched := cmd.PullRequestsFetched(msg)
-		m.pullRequests = fetched.PullRequests
-		m.prSelector.Title = "Select a pull request to split:"
-		m.prSelector.StopSpinner()
-		commands = append(commands, m.prSelector.SetItems(newCommitItems(m.pullRequests)))
+	case cmd.CommitsFetched:
+		fetched := cmd.CommitsFetched(msg)
+		m.commits = fetched.Commits
+		m.commitSelector.Title = "Select commits to move to another branch:"
+		m.commitSelector.StopSpinner()
+		items := newCommitItems(m.commits)
+		commands = append(commands, m.commitSelector.SetItems(items))
 
 	case tea.KeyMsg:
-		if m.prSelector.FilterState() == list.Filtering {
+		if m.commitSelector.FilterState() == list.Filtering {
 			break
 		}
 
 		switch keypress := msg.String(); keypress {
 		case "enter":
-			_, ok := m.prSelector.SelectedItem().(commitItem)
+			_, ok := m.commitSelector.SelectedItem().(commitItem)
 			if ok {
 				//m.PullRequestId = i.n
 			}
@@ -131,7 +143,7 @@ func (m SplitModel) Update(msg tea.Msg) (SplitModel, tea.Cmd) {
 		}
 	}
 
-	m.prSelector, command = m.prSelector.Update(msg)
+	m.commitSelector, command = m.commitSelector.Update(msg)
 	commands = append(commands, command)
 
 	return m, tea.Batch(commands...)
@@ -142,6 +154,5 @@ func (m SplitModel) View() string {
 		return ""
 	}
 
-	//nwo := cmd.ToNwo(m.Repository)
-	return m.prSelector.View()
+	return m.commitSelector.View()
 }

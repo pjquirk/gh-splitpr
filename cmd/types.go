@@ -5,3 +5,8 @@ type PullRequest struct {
 	Title  string
 	Author string
 }
+
+type Commit struct {
+	Sha     string
+	Comment string
+}

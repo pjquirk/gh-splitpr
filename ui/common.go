@@ -21,7 +21,7 @@ var (
 	defaultSelectedItemStyle = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("170"))
 )
 
-func newListModel(pageSize int, itemStyle lipgloss.Style) list.Model {
+func newListModel(pageSize int, itemDelegate list.ItemDelegate, itemStyle lipgloss.Style) list.Model {
 	linesPerItem := (itemStyle.GetVerticalFrameSize() + 1)
 	titleBarHeight := titleBarStyle.GetVerticalFrameSize()
 	// Add one for each line of text
@@ -30,7 +30,7 @@ func newListModel(pageSize int, itemStyle lipgloss.Style) list.Model {
 	helpHeight := helpStyle.GetVerticalFrameSize() + 1
 	height := titleBarHeight + titleHeight + pageHeight + helpHeight + (pageSize * linesPerItem)
 
-	newModel := list.NewModel([]list.Item{}, prItemDelegate{}, 0, height)
+	newModel := list.NewModel([]list.Item{}, itemDelegate, 0, height)
 	newModel.SetShowStatusBar(false)
 	newModel.Styles.Title = titleStyle
 	newModel.Styles.TitleBar = titleBarStyle
