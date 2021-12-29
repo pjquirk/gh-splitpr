@@ -9,6 +9,9 @@ require (
 )
 
 require (
+	github.com/atotto/clipboard v0.1.2 // indirect
+	github.com/charmbracelet/bubbles v0.9.0 // indirect
+	github.com/charmbracelet/lipgloss v0.4.0 // indirect
 	github.com/cli/safeexec v1.0.0 // indirect
 	github.com/cli/shurcooL-graphql v0.0.1 // indirect
 	github.com/containerd/console v1.0.2 // indirect
@@ -21,6 +24,7 @@ require (
 	github.com/muesli/termenv v0.9.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
+	github.com/sahilm/fuzzy v0.1.0 // indirect
 	golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2 // indirect
 	golang.org/x/sys v0.0.0-20210423082822-04245dca01da // indirect
 	golang.org/x/term v0.0.0-20210422114643-f5beecf764ed // indirect

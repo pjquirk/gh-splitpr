@@ -19,7 +19,7 @@ type Model struct {
 func NewModel() Model {
 	return Model{
 		verbose:   false,
-		bootstrap: BootstrapModel{},
+		bootstrap: NewBootstrapModel(),
 	}
 }
 
