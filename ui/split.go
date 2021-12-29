@@ -6,7 +6,6 @@ import (
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/cli/go-gh"
 	"github.com/pjquirk/gh-splitpr/cmd"
 )
@@ -37,8 +36,7 @@ func newCommitItems(commits []cmd.Commit) []list.Item {
 
 var (
 	commitItemStyle         = defaultItemStyle
-	commitCheckedItemStyle  = defaultItemStyle.Background(lipgloss.Color("240"))
-	commitSelectedItemStyle = defaultSelectedItemStyle
+	commitSelectedItemStyle = defaultSelectedItemStyle.PaddingLeft(4)
 )
 
 type commitItemDelegate struct{}
