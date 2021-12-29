@@ -36,7 +36,7 @@ func newCommitItems(commits []cmd.Commit) []list.Item {
 
 var (
 	commitItemStyle         = defaultItemStyle
-	commitSelectedItemStyle = defaultSelectedItemStyle.PaddingLeft(4)
+	commitSelectedItemStyle = defaultSelectedItemStyle.Copy().PaddingLeft(4)
 )
 
 type commitItemDelegate struct{}
