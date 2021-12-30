@@ -14,14 +14,14 @@ type Model struct {
 	verbose   bool
 	err       string
 	bootstrap BootstrapModel
-	split     SplitModel
+	commits   CommitsModel
 }
 
 func NewModel() Model {
 	return Model{
 		verbose:   false,
 		bootstrap: NewBootstrapModel(),
-		split:     NewSplitModel(),
+		commits:   NewCommitsModel(),
 	}
 }
 
@@ -60,7 +60,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.bootstrap, command = m.bootstrap.Update(msg)
 		commands = append(commands, command)
 	} else {
-		m.split, command = m.split.Update(msg)
+		m.commits, command = m.commits.Update(msg)
 		commands = append(commands, command)
 	}
 	return m, tea.Batch(commands...)
@@ -76,7 +76,7 @@ func (m Model) View() string {
 	if !m.bootstrap.IsComplete() {
 		s.WriteString(m.bootstrap.View())
 	} else {
-		s.WriteString(m.split.View())
+		s.WriteString(m.commits.View())
 	}
 
 	view := s.String()

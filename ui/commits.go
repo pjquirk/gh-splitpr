@@ -87,7 +87,7 @@ func newListKeyMap() *listKeyMap {
 	}
 }
 
-type SplitModel struct {
+type CommitsModel struct {
 	Repository    gh.Repository
 	PullRequestId int
 
@@ -97,8 +97,8 @@ type SplitModel struct {
 	keys            *listKeyMap
 }
 
-func NewSplitModel() SplitModel {
-	splitModel := SplitModel{
+func NewCommitsModel() CommitsModel {
+	commitsModel := CommitsModel{
 		Repository:      nil,
 		PullRequestId:   -1,
 		commits:         []cmd.Commit{},
@@ -106,30 +106,30 @@ func NewSplitModel() SplitModel {
 		commitSelector:  newListModel(5, commitItemDelegate{}, commitItemStyle),
 		keys:            newListKeyMap(),
 	}
-	splitModel.commitSelector.AdditionalFullHelpKeys = func() []key.Binding {
+	commitsModel.commitSelector.AdditionalFullHelpKeys = func() []key.Binding {
 		return []key.Binding{
-			splitModel.keys.toggleItem,
-			splitModel.keys.finishSelection,
+			commitsModel.keys.toggleItem,
+			commitsModel.keys.finishSelection,
 		}
 	}
-	splitModel.commitSelector.AdditionalShortHelpKeys = func() []key.Binding {
+	commitsModel.commitSelector.AdditionalShortHelpKeys = func() []key.Binding {
 		return []key.Binding{
-			splitModel.keys.toggleItem,
-			splitModel.keys.finishSelection,
+			commitsModel.keys.toggleItem,
+			commitsModel.keys.finishSelection,
 		}
 	}
-	return splitModel
+	return commitsModel
 }
 
-func (m SplitModel) IsComplete() bool {
+func (m CommitsModel) IsComplete() bool {
 	return m.selectedCommits != nil
 }
 
-func (m SplitModel) Init() tea.Cmd {
+func (m CommitsModel) Init() tea.Cmd {
 	return nil
 }
 
-func (m SplitModel) Update(msg tea.Msg) (SplitModel, tea.Cmd) {
+func (m CommitsModel) Update(msg tea.Msg) (CommitsModel, tea.Cmd) {
 	var (
 		command  tea.Cmd
 		commands []tea.Cmd
@@ -188,7 +188,7 @@ func (m SplitModel) Update(msg tea.Msg) (SplitModel, tea.Cmd) {
 	return m, tea.Batch(commands...)
 }
 
-func (m SplitModel) View() string {
+func (m CommitsModel) View() string {
 	if m.IsComplete() {
 		return ""
 	}
@@ -196,7 +196,7 @@ func (m SplitModel) View() string {
 	return m.commitSelector.View()
 }
 
-func selectedCommits(m SplitModel) (selected []cmd.Commit) {
+func selectedCommits(m CommitsModel) (selected []cmd.Commit) {
 	allItems := m.commitSelector.Items()
 	for _, v := range allItems {
 		commit := v.(commitItem)
