@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/cli/go-gh"
@@ -68,25 +69,60 @@ func (d commitItemDelegate) Render(w io.Writer, m list.Model, index int, listIte
 	fmt.Fprintf(w, fn(str))
 }
 
+type listKeyMap struct {
+	toggleItem      key.Binding
+	finishSelection key.Binding
+}
+
+func newListKeyMap() *listKeyMap {
+	return &listKeyMap{
+		toggleItem: key.NewBinding(
+			key.WithKeys("t"),
+			key.WithHelp("t", "toggle item"),
+		),
+		finishSelection: key.NewBinding(
+			key.WithKeys("enter"),
+			key.WithHelp("enter", "finish"),
+		),
+	}
+}
+
 type SplitModel struct {
 	Repository    gh.Repository
 	PullRequestId int
 
-	commits        []cmd.Commit
-	commitSelector list.Model
+	commits         []cmd.Commit
+	selectedCommits []cmd.Commit
+	commitSelector  list.Model
+	keys            *listKeyMap
 }
 
 func NewSplitModel() SplitModel {
-	return SplitModel{
-		Repository:     nil,
-		PullRequestId:  -1,
-		commits:        []cmd.Commit{},
-		commitSelector: newListModel(5, commitItemDelegate{}, commitItemStyle),
+	splitModel := SplitModel{
+		Repository:      nil,
+		PullRequestId:   -1,
+		commits:         []cmd.Commit{},
+		selectedCommits: nil,
+		commitSelector:  newListModel(5, commitItemDelegate{}, commitItemStyle),
+		keys:            newListKeyMap(),
 	}
+	splitModel.commitSelector.AdditionalFullHelpKeys = func() []key.Binding {
+		return []key.Binding{
+			splitModel.keys.toggleItem,
+			splitModel.keys.finishSelection,
+		}
+	}
+	splitModel.commitSelector.AdditionalShortHelpKeys = func() []key.Binding {
+		return []key.Binding{
+			splitModel.keys.toggleItem,
+			splitModel.keys.finishSelection,
+		}
+	}
+	return splitModel
 }
 
 func (m SplitModel) IsComplete() bool {
-	return false
+	return m.selectedCommits != nil
 }
 
 func (m SplitModel) Init() tea.Cmd {
@@ -130,14 +166,19 @@ func (m SplitModel) Update(msg tea.Msg) (SplitModel, tea.Cmd) {
 			break
 		}
 
-		switch keypress := msg.String(); keypress {
-		case "enter":
+		switch {
+		case key.Matches(msg, m.keys.toggleItem):
 			i, ok := m.commitSelector.SelectedItem().(commitItem)
 			if ok {
 				index := m.commitSelector.Index()
 				i.checked = !i.checked
 				commands = append(commands, m.commitSelector.SetItem(index, i))
 			}
+
+		case key.Matches(msg, m.keys.finishSelection):
+			m.selectedCommits = selectedCommits(m)
+			// TODO: command to start the split
+			commands = append(commands, nil)
 		}
 	}
 
@@ -153,4 +194,18 @@ func (m SplitModel) View() string {
 	}
 
 	return m.commitSelector.View()
+}
+
+func selectedCommits(m SplitModel) (selected []cmd.Commit) {
+	allItems := m.commitSelector.Items()
+	for _, v := range allItems {
+		commit := v.(commitItem)
+		if commit.checked {
+			selected = append(selected, cmd.Commit{
+				Sha:     commit.sha,
+				Comment: commit.comment,
+			})
+		}
+	}
+	return
 }
