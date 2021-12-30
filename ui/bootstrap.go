@@ -153,7 +153,5 @@ func (m BootstrapModel) View() string {
 	if m.IsComplete() {
 		return ""
 	}
-
-	//nwo := cmd.ToNwo(m.Repository)
 	return m.prSelector.View()
 }
