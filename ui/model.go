@@ -59,8 +59,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if !m.bootstrap.IsComplete() {
 		m.bootstrap, command = m.bootstrap.Update(msg)
 		commands = append(commands, command)
-	} else {
+	} else if !m.commits.IsComplete() {
 		m.commits, command = m.commits.Update(msg)
+		commands = append(commands, command)
+	} else {
+		m.split, command = m.split.Update(msg)
 		commands = append(commands, command)
 	}
 	return m, tea.Batch(commands...)

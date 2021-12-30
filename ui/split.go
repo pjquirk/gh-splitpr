@@ -1,6 +1,9 @@
 package ui
 
 import (
+	"fmt"
+	"strings"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/cli/go-gh"
 	"github.com/pjquirk/gh-splitpr/cmd"
@@ -10,6 +13,8 @@ type SplitModel struct {
 	Repository    gh.Repository
 	PullRequestId int
 	Commits       []cmd.Commit
+
+	splitSettings *cmd.SplitSettings
 }
 
 func NewSplitModel() SplitModel {
@@ -34,8 +39,20 @@ func (m SplitModel) Update(msg tea.Msg) (SplitModel, tea.Cmd) {
 		commands []tea.Cmd
 	)
 
-	// switch msg := msg.(type) {
-	// }
+	switch msg := msg.(type) {
+	case cmd.CommitsSelected:
+		commitsSelected := cmd.CommitsSelected(msg)
+		m.Repository = commitsSelected.Repository
+		m.PullRequestId = commitsSelected.PullRequestId
+		m.Commits = commitsSelected.Commits
+		commands = append(commands, func() tea.Msg {
+			return cmd.GetSplitSettings(m.Repository, m.PullRequestId, m.Commits)
+		})
+
+	case cmd.SplitSettings:
+		splitSettings := cmd.SplitSettings(msg)
+		m.splitSettings = &splitSettings
+	}
 
 	//m.prSelector, command = m.prSelector.Update(msg)
 	//commands = append(commands, command)
@@ -68,6 +85,21 @@ func (m SplitModel) View() string {
 	 * - The chosen commits may not apply cleanly
 	 * - Need to check the remote name
 	 */
+
+	// Necessary inputs:
+	// - New branch name (default to current branch + "split-ABCDEFGH"
+	// - Base branch (default to base of given PR)
+	// - New PR title (default to "Split from " + PR's title)
+	if m.splitSettings != nil {
+		b := strings.Builder{}
+		b.WriteString("Settings:\n")
+		b.WriteString(fmt.Sprintf("  BodyFile:       %s\n", m.splitSettings.BodyFile))
+		b.WriteString(fmt.Sprintf("  CloneDir:       %s\n", m.splitSettings.CloneDir))
+		b.WriteString(fmt.Sprintf("  BaseBranchName: %s\n", m.splitSettings.BaseBranchName))
+		b.WriteString(fmt.Sprintf("  NewBranchName:  %s\n", m.splitSettings.NewBranchName))
+		b.WriteString(fmt.Sprintf("  NewPrTitle:     %s\n", m.splitSettings.NewPrTitle))
+		return b.String()
+	}
 
 	//return m.prSelector.View()
 	return "Here wo go!"
