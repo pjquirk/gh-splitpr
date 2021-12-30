@@ -1,8 +1,6 @@
 package ui
 
 import (
-	"strings"
-
 	"github.com/pjquirk/gh-splitpr/cmd"
 
 	"fmt"
@@ -15,6 +13,7 @@ type Model struct {
 	err       string
 	bootstrap BootstrapModel
 	commits   CommitsModel
+	split     SplitModel
 }
 
 func NewModel() Model {
@@ -22,6 +21,7 @@ func NewModel() Model {
 		verbose:   false,
 		bootstrap: NewBootstrapModel(),
 		commits:   NewCommitsModel(),
+		split:     NewSplitModel(),
 	}
 }
 
@@ -70,15 +70,14 @@ func (m Model) View() string {
 	if len(m.err) > 0 {
 		return m.err
 	}
-
-	s := strings.Builder{}
-
 	if !m.bootstrap.IsComplete() {
-		s.WriteString(m.bootstrap.View())
-	} else {
-		s.WriteString(m.commits.View())
+		return m.bootstrap.View()
 	}
-
-	view := s.String()
-	return view
+	if !m.commits.IsComplete() {
+		return m.commits.View()
+	}
+	if !m.split.IsComplete() {
+		return m.split.View()
+	}
+	return "Nothing to do?"
 }

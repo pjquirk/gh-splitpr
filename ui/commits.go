@@ -177,8 +177,13 @@ func (m CommitsModel) Update(msg tea.Msg) (CommitsModel, tea.Cmd) {
 
 		case key.Matches(msg, m.keys.finishSelection):
 			m.selectedCommits = selectedCommits(m)
-			// TODO: command to start the split
-			commands = append(commands, nil)
+			commands = append(commands, func() tea.Msg {
+				return cmd.CommitsSelected{
+					Repository:    m.Repository,
+					PullRequestId: m.PullRequestId,
+					Commits:       m.selectedCommits,
+				}
+			})
 		}
 	}
 

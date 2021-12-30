@@ -10,3 +10,9 @@ type PullRequestSelected struct {
 	Repository    gh.Repository
 	PullRequestId int
 }
+
+type CommitsSelected struct {
+	Repository    gh.Repository
+	PullRequestId int
+	Commits       []Commit
+}
